@@ -20,13 +20,11 @@ Plano refatoração:
 import glm
 import glfw
 import math
-import random
 import threading
 import numpy as np
 from PIL import Image
 from time import sleep
 from OpenGL.GL import *
-import OpenGL.GL.shaders
 
 
 # Inicializando janela e váriaveis
@@ -171,9 +169,6 @@ glUseProgram(program)
 # Preparando dados para enviar a GPU
 # 
 # Nesse momento, nós compilamos nossos Vertex e Program Shaders para que a GPU possa processá-los.
-# 
-# Por outro lado, as informações de vértices geralmente estão na CPU e devem ser transmitidas para a GPU.
-# 
 
 
 glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE)
@@ -194,52 +189,37 @@ TEXTURE_PATH = "objects/%s/texture_%s.png"
 
 class Objetoss:
 
-    _currentTextureIndex = 0    # conta os ids das texturas
-    _points = None              # armazena todos os pontos de todos os vertices
-    _textures = None            # armazena todos os pontos de todas as texturas
+    _currentTextureIndex = 0    
+    _points = None              
+    _textures = None           
 
-    def __init__(self, objName = None, 
-            x = 0.0, y = 0.0, z = 0.0, 
-            rot_x = 0.0, rot_y = 0.0, rot_z = 0.0, 
-            sx = 1.0, sy = 1.0, sz = 1.0, 
-            visible = True, ntextures = 1):
-        #  Construtor de um objeto 3D que será desenhado na tela. 
+    def __init__(self, posX = 0.0, posY = 0.0, posZ = 0.0, rotateX = 0.0, rotateY = 0.0, rotateZ = 0.0, scaleX = 0.0, scaleY = 0.0, scaleZ = 0.0, objName = None, ntextures = 1):
+
+        self.posX = posX
+        self.posY = posY
+        self.posZ = posZ
+
+        self.rotateX = rotateX
+        self.rotateY = rotateY
+        self.rotateZ = rotateZ
+
+        self.scaleX = scaleX
+        self.scaleY = scaleY
+        self.scaleZ = scaleZ
 
         self._thread = None 
         self._threadStop = False
+        self.visible = True
 
-        # Definir posição inicial do objeto no mundo.
-        self.x = x
-        self.y = y
-        self.z = z
-
-        # Definir rotação inicial do objeto (em radianos).
-        self.rot_x = rot_x
-        self.rot_y = rot_y
-        self.rot_z = rot_z
-
-        # Definir escala inicial do objeto.
-        self.sx = sx
-        self.sy = sy
-        self.sz = sz
-
-        # Definir objeto como visível.
-        self.visible = visible
-
-        # Definição do índice de textura desse objeto, início dos vértices e término.
         self._textureIndex = None
         self._vertexIndex = None
         self._vertexLength = None
 
         if objName is not None:
-            print("Carregando pontos do objeto %s...\n" % (objName.upper()), end = "")
             self.setVertex(OBJECT_PATH % (objName))
 
-            print("Carregando textura... ", end = "")
             for cont in range (0, ntextures):
-                self.load_texture_from_file(TEXTURE_PATH % (objName, str(cont)))            
-            
-           
+                self.load_texture_from_file(TEXTURE_PATH % (objName, str(cont)))
 
     def setVertex(self, file_path):
       
@@ -327,7 +307,7 @@ class Objetoss:
         
     
     @staticmethod
-    def syncGPU():
+    def scaleYncGPU():
         #  Essa função sincroniza os dados dos vértices e coordenadas de textura com a GPU. Basicamente, ela envia os dados pra GPU. 
 
         if Objetoss._points is None or Objetoss._textures is None:
@@ -360,8 +340,6 @@ class Objetoss:
         loc_texture_coord = glGetAttribLocation(program, "texture_coord")
         glEnableVertexAttribArray(loc_texture_coord)
         glVertexAttribPointer(loc_texture_coord, 2, GL_FLOAT, False, stride, offset)
-
-        
         
     # aplica a matriz model
     def draw(self):        
@@ -374,20 +352,20 @@ class Objetoss:
     
         matrix_transform = glm.mat4(1.0) # Instanciando uma matriz identidade.
         
-        # Aplicando translação em X, Y e Z.
-        matrix_transform = glm.translate(matrix_transform, glm.vec3(self.x, self.y, self.z))
+        # Translação global
+        matrix_transform = glm.translate(matrix_transform, glm.vec3(self.posX, self.posY, self.posZ))
 
-        # Aplicando rotação no eixo X.
-        matrix_transform = glm.rotate(matrix_transform, self.rot_x, glm.vec3(1.0, 0.0, 0.0))
+        # Rotação em X
+        matrix_transform = glm.rotate(matrix_transform, self.rotateX, glm.vec3(1.0, 0.0, 0.0))
 
         # Aplicando rotação no eixo Y.
-        matrix_transform = glm.rotate(matrix_transform, self.rot_y, glm.vec3(0.0, 1.0, 0.0))
+        matrix_transform = glm.rotate(matrix_transform, self.rotateY, glm.vec3(0.0, 1.0, 0.0))
 
         # Aplicando rotação no eixo Z.
-        matrix_transform = glm.rotate(matrix_transform, self.rot_z, glm.vec3(0.0, 0.0, 1.0))
+        matrix_transform = glm.rotate(matrix_transform, self.rotateZ, glm.vec3(0.0, 0.0, 1.0))
         
         # Aplicando escala em X, Y e Z.
-        matrix_transform = glm.scale(matrix_transform, glm.vec3(self.sx, self.sy, self.sz))
+        matrix_transform = glm.scale(matrix_transform, glm.vec3(self.scaleX, self.scaleY, self.scaleZ))
         
         matrix_transform = np.array(matrix_transform).T
 
@@ -431,66 +409,58 @@ class Objetoss:
         while(not self._threadStop):
             self._alive()
 
-
-# Criando os objetos imóveis, carregar os vértices e texturas.
-
-
-Objs = [ ]
-Objs.append( Objetoss(objName = "mountains", x = 18.0, rot_y = math.pi/2) )
-Objs.append( Objetoss(objName = "mountains", x = -18.0, rot_y = math.pi/2) )
-Objs.append( Objetoss(objName = "mountains", z = 18.0) )
-Objs.append( Objetoss(objName = "mountains", z = -18.0) )
-Objs.append( Objetoss(objName = "ground", y = -0.9, sx = 20.0, sz = 20.0) )
-Objs.append( Objetoss(objName = "chair", y = 0.1, x = 7.8, z=0.4, sx = 2, sz = 2, sy = 2,rot_y = math.pi) ) 
-Objs.append( Objetoss(objName = "notebook", y = 0.427, x = 8, sx = 1, sz = 1, sy = 1) )
-Objs.append( Objetoss(objName = "barn", y = 0.1, x = 8, sx = 1, sz = 1, sy = 1) )
-Objs.append( Objetoss(objName = "house", y = 0.3, x = -5, sx = 3, sz = 3, sy = 3, rot_y = math.pi/2) )
-Objs.append( Objetoss(objName = "office", y = 0.1, x = 8, sx = 2, sz = 2, sy = 2) )
-Objs.append( Objetoss(objName = "mill", y = -0.2, x = 12, z = 6, sx = 0.5, sz = 0.5, sy = 0.5) ) 
-Objs.append( Objetoss(objName = "street", y = -0.89, x = 0, z = 0, sx = 3/2, sz = 18) )
-Objs.append( Objetoss(objName = "horse", y = 0.1, x = 10, z = 5, sx = 5, sy = 5, sz = 5) )
-Objs.append( Objetoss(objName = "cow", y = 0.1, x = 7, z = 6.3, sx = 0.35, sy = 0.35, sz = 0.35, rot_y = -math.pi/2) )
-Objs.append( Objetoss(objName = "rainbow", y = 0.4, x = 8, sx = 10, sz = 10, sy = 10) )
-Objs.append( Objetoss(objName = "fire", y = 0.1, x = 6.7, sx = 1, sz = 1, sy = 1, rot_y = math.pi/2) ) 
-
-
-# Objetos com animação
-# 
-
-
 ObjsAnimados = [ ]    
 
-class Marte(Objetoss): # A lua vai nascendo e se pondo no horizonte aos poucos.
+class Marte(Objetoss):
     def _alive(self):
-        self.y += 0.05
-        self.rot_z = math.pi/6
-        if self.y > 100.0:
-            self.y = -20
+        self.posY += 0.05
+        self.rotateZ = math.pi/6
+        if self.posY > 100.0:
+            self.posY = -20
         sleep(0.1)
         
-class Ufo(Objetoss): # A lua vai nascendo e se pondo no horizonte aos poucos.
+class Ufo(Objetoss):
     def _alive(self):
-        self.x += 0.05
-        if self.x > 100.0:
-            self.x = -20
+        self.posX += 0.05
+        if self.posX > 100.0:
+            self.posX = -20
         sleep(0.1)
 
-class nuvens(Objetoss): # Para mover as nuvens no céu 
+class nuvens(Objetoss): 
     def _alive(self):
-        self.rot_y = (self.rot_y + 0.0005) % (2 * math.pi)
+        self.rotateY = (self.rotateY + 0.0005) % (2 * math.pi)
         sleep(0.1)
 
 class Car(Objetoss): 
     def _alive(self):
-        self.z += 0.05
-        if self.z > 15.0:
-            self.z = -15
+        self.posZ += 0.05
+        if self.posZ > 15.0:
+            self.posZ = -15
         sleep(0.1)
+
+
+Objs = [ ]
+Objs.append( Objetoss(objName = "mountains", posX = 18.0, rotateY = math.pi/2) )
+Objs.append( Objetoss(objName = "mountains", posX = -18.0, rotateY = math.pi/2) )
+Objs.append( Objetoss(objName = "mountains", posZ = 18.0) )
+Objs.append( Objetoss(objName = "mountains", posZ = -18.0) )
+Objs.append( Objetoss(objName = "ground", posY = -0.9, scaleX = 20.0, scaleZ = 20.0) )
+Objs.append( Objetoss(objName = "chair", posY = 0.1, posX = 7.8, posZ = 0.4, scaleX = 2, scaleZ = 2, scaleY = 2,rotateY = math.pi) ) 
+Objs.append( Objetoss(objName = "notebook", posY = 0.427, posX = 8, scaleX = 1, scaleZ = 1, scaleY = 1) )
+Objs.append( Objetoss(objName = "barn", posY = 0.1, posX = 8, scaleX = 1, scaleZ = 1, scaleY = 1) )
+Objs.append( Objetoss(objName = "house", posY = 0.3, posX = -5, scaleX = 3, scaleZ = 3, scaleY = 3, rotateY = math.pi/2) )
+Objs.append( Objetoss(objName = "office", posY = 0.1, posX = 8, scaleX = 2, scaleZ = 2, scaleY = 2) )
+Objs.append( Objetoss(objName = "mill", posY = -0.2, posX = 12, posZ = 6, scaleX = 0.5, scaleZ = 0.5, scaleY = 0.5) ) 
+Objs.append( Objetoss(objName = "street", posY = -0.89, posX = 0, posZ = 0, scaleX = 3/2, scaleZ = 18) )
+Objs.append( Objetoss(objName = "horse", posY = 0.1, posX = 10, posZ = 5, scaleX = 5, scaleY = 5, scaleZ = 5) )
+Objs.append( Objetoss(objName = "cow", posY = 0.1, posX = 7, posZ = 6.3, scaleX = 0.35, scaleY = 0.35, scaleZ = 0.35, rotateY = -math.pi/2) )
+Objs.append( Objetoss(objName = "rainbow", posY = 0.4, posX = 8, scaleX = 10, scaleZ = 10, scaleY = 10) )
+Objs.append( Objetoss(objName = "fire", posY = 0.1, posX = 6.7, scaleX = 1, scaleZ = 1, scaleY = 1, rotateY = math.pi/2) ) 
         
-ObjsAnimados.append( Car(objName = "car", x = 0.5, y = 0.35, z = 0, sx = 60, sz = 60, sy = 60) )
-ObjsAnimados.append( nuvens(objName = "nuvens", sx = 100.0, sy = 100.0, sz = 100.0) )
-ObjsAnimados.append( Marte(objName = "mars", x = 45, y = 50, z = 40, sx = 18.0, sy = 18.0, sz = 18.0) )
-ObjsAnimados.append( Ufo(objName = "ufo", x = 1.5, y = 10, z = 10) )
+ObjsAnimados.append( Car(objName = "car", posX = 0.5, posY = 0.35, posZ = 0, scaleX = 60, scaleZ = 60, scaleY = 60) )
+ObjsAnimados.append( nuvens(objName = "nuvens", scaleX = 100.0, scaleY = 100.0, scaleZ = 100.0) )
+ObjsAnimados.append( Marte(objName = "mars", posX = 45, posY = 50, posZ = 40, scaleX = 18.0, scaleY = 18.0, scaleZ = 18.0) )
+ObjsAnimados.append( Ufo(objName = "ufo", posX = 1.5, posY = 10, posZ = 10) )
 
 
 # Enviar dados para a GPU.
@@ -498,7 +468,7 @@ ObjsAnimados.append( Ufo(objName = "ufo", x = 1.5, y = 10, z = 10) )
 # Nossa classe já possue um método estático que faz isso (requisitar slots de buffer -> enviar vértices -> enviar coordenadas de texturas). Basta chamar esse método.
 
 
-Objetoss.syncGPU()
+Objetoss.scaleYncGPU()
 
 
 # Eventos para modificar a posição da câmera.
@@ -566,7 +536,6 @@ class Camera(Objetoss):
 def key_event(window,key,scancode,action,mods):
     global polygonal_mode, paused, free_camera, W_pressed, S_pressed, A_pressed, D_pressed
     
-    cameraSpeed = 0.2
     if key == 87: # Tecla W.
         W_pressed = False if (action == 0) else True
     
@@ -603,8 +572,6 @@ def mouse_event(window, xpos, ypos):
 
     xoffset = xpos - lastX
     yoffset = lastY - ypos
-    # lastX = xpos
-    # lastY = ypos
 
     sensitivity = 0.3 
     xoffset *= sensitivity
