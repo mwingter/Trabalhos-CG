@@ -28,21 +28,11 @@ from OpenGL.GL import *
 
 
 # Inicializando janela e váriaveis
-
-
-# Configurações globais
-W = 1200      # largura da janela
-H = 1600      # altura da janela
-
-title = "T2"
-
-
-# Inicializando janela
-
-
+width = 1200
+heigth = 1600
 glfw.init()
 glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
-window = glfw.create_window(W, H, title, None, None)
+window = glfw.create_window(width, heigth, "T2", None, None)
 glfw.make_context_current(window)
 
 
@@ -177,23 +167,22 @@ glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 glEnable(GL_LINE_SMOOTH)
 glEnable(GL_TEXTURE_2D)
 
-qtd_texturas = 20
-textures = glGenTextures(qtd_texturas)
+textures = glGenTextures(20)
 
 
-# Classe dos objetos desenhados
-# 
-# Para facilitar o desenho dos objetos, faremos uma classe que representa qualquer objeto que se deseja desenhar na tela. Dessa forma, não é necessário criar uma função exclusiva para cada um desses objetos - economizando linhas de código. Além disso, com essa classe fica mais fácil manipular os objetos.
 OBJECT_PATH = "objects/%s/vertex.obj"
 TEXTURE_PATH = "objects/%s/texture_%s.png"
 
 class Objeto:
 
-    _currentTextureIndex = 0    
-    _points = None              
-    _textures = None           
+    textureCount = 0    
+    p = None              
+    textures = None           
 
-    def __init__(self, posX = 0.0, posY = 0.0, posZ = 0.0, rotateX = 0.0, rotateY = 0.0, rotateZ = 0.0, scaleX = 0.0, scaleY = 0.0, scaleZ = 0.0, objName = None, ntextures = 1):
+    def __init__(self, posX = 0.0, posY = 0.0, posZ = 0.0, 
+                rotateX = 0.0, rotateY = 0.0, rotateZ = 0.0, 
+                scaleX = 1.0, scaleY = 1.0, scaleZ = 1.0, 
+                name = None, ntextures = 1):
 
         self.posX = posX
         self.posY = posY
@@ -217,11 +206,11 @@ class Objeto:
 
         self.default_speed = 0.05
 
-        if objName is not None:
-            self.setVertex(OBJECT_PATH % (objName))
+        if name is not None:
+            self.setVertex(OBJECT_PATH % (name))
 
             for cont in range (0, ntextures):
-                self.load_texture_from_file(TEXTURE_PATH % (objName, str(cont)))
+                self.load_texture_from_file(TEXTURE_PATH % (name, str(cont)))
 
     def setVertex(self, file_path):
       
@@ -267,32 +256,31 @@ class Objeto:
             'texture': texture_coords
         }
 
-        if Objeto._points is None or Objeto._textures is None:
-            Objeto._points = [ ]
-            Objeto._textures = [ ]
+        if Objeto.p is None or Objeto.textures is None:
+            Objeto.p = [ ]
+            Objeto.textures = [ ]
 
-        self._vertexIndex = len(Objeto._points)
+        self._vertexIndex = len(Objeto.p)
         faces_visited = []
         for face in model['faces']:
             if face[2] not in faces_visited:
-                print(face[2], "vertice inicial = ", len(Objeto._points))
+                print(face[2], "vertice inicial = ", len(Objeto.p))
                 faces_visited.append(face[2])
             for vertice_id in face[0]:                
-                Objeto._points.append(model['vertices'][vertice_id - 1])
+                Objeto.p.append(model['vertices'][vertice_id - 1])
             for texture_id in face[1]:
-                Objeto._textures.append(model['texture'][texture_id - 1])
+                Objeto.textures.append(model['texture'][texture_id - 1])
             
-        self._vertexLength = len(Objeto._points) - self._vertexIndex
+        self._vertexLength = len(Objeto.p) - self._vertexIndex
        
         
         
         
 
     def load_texture_from_file(self, filePath):
-        #  Essa função vai definir a textura deste objeto no mundo usando um arquivo em disco. 
         if self._textureIndex is None:
-            self._textureIndex = Objeto._currentTextureIndex
-            Objeto._currentTextureIndex += 1
+            self._textureIndex = Objeto.textureCount
+            Objeto.textureCount += 1
         img = Image.open(filePath)
         img_width = img.size[0]
         img_height = img.size[1]
@@ -312,14 +300,14 @@ class Objeto:
     def syncGPU():
         #  Essa função sincroniza os dados dos vértices e coordenadas de textura com a GPU. Basicamente, ela envia os dados pra GPU. 
 
-        if Objeto._points is None or Objeto._textures is None:
+        if Objeto.p is None or Objeto.textures is None:
             raise Exception("Objeto não foi definido")
 
         buffer = glGenBuffers(2) # Requisitar slots de buffer pra GPU.
 
         # Definir vértices.
-        vertices = np.zeros(len(Objeto._points), [("position", np.float32, 3)])
-        vertices['position'] = Objeto._points
+        vertices = np.zeros(len(Objeto.p), [("position", np.float32, 3)])
+        vertices['position'] = Objeto.p
 
         # Carregar vértices.
         glBindBuffer(GL_ARRAY_BUFFER, buffer[0])
@@ -331,8 +319,8 @@ class Objeto:
         glVertexAttribPointer(loc_vertices, 3, GL_FLOAT, False, stride, offset)
 
         # Definir coordenadas de texturas.
-        textures = np.zeros(len(Objeto._textures), [("position", np.float32, 2)]) # Duas coordenadas.
-        textures['position'] = Objeto._textures
+        textures = np.zeros(len(Objeto.textures), [("position", np.float32, 2)]) # Duas coordenadas.
+        textures['position'] = Objeto.textures
 
         # Carregar coordenadas de texturas.
         glBindBuffer(GL_ARRAY_BUFFER, buffer[1])
@@ -447,33 +435,33 @@ class Car(Objeto):
 
 obj_estaticos = []
 # móveis e animais
-obj_estaticos.append(Objeto(objName = "chair", posY = 0.1, posX = 7.8, posZ = 0.4, scaleX = 2, scaleZ = 2, scaleY = 2,rotateY = math.pi) )
-obj_estaticos.append(Objeto(objName = "notebook", posY = 0.427, posX = 8, scaleX = 1, scaleZ = 1, scaleY = 1))
-obj_estaticos.append(Objeto(objName = "horse", posY = 0.1, posX = 10, posZ = 5, scaleX = 5, scaleY = 5, scaleZ = 5))
-obj_estaticos.append(Objeto(objName = "cow", posY = 0.1, posX = 7, posZ = 6.3, scaleX = 0.35, scaleY = 0.35, scaleZ = 0.35, rotateY = -math.pi/2))
+obj_estaticos.append(Objeto(name = "chair", posY = 0.1, posX = 7.8, posZ = 0.4, scaleX = 2, scaleZ = 2, scaleY = 2,rotateY = math.pi) )
+obj_estaticos.append(Objeto(name = "notebook", posY = 0.427, posX = 8, scaleX = 1, scaleZ = 1, scaleY = 1))
+obj_estaticos.append(Objeto(name = "horse", posY = 0.1, posX = 10, posZ = 5, scaleX = 5, scaleY = 5, scaleZ = 5))
+obj_estaticos.append(Objeto(name = "cow", posY = 0.1, posX = 7, posZ = 6.3, scaleX = 0.35, scaleY = 0.35, scaleZ = 0.35, rotateY = -math.pi/2))
 
 # construções
-obj_estaticos.append(Objeto(objName = "house", posY = 0.3, posX = -5, scaleX = 3, scaleZ = 3, scaleY = 3, rotateY = math.pi/2))
-obj_estaticos.append(Objeto(objName = "office", posY = 0.1, posX = 8, scaleX = 2, scaleZ = 2, scaleY = 2))
-obj_estaticos.append(Objeto(objName = "mill", posY = -0.2, posX = 12, posZ = 6, scaleX = 0.5, scaleZ = 0.5, scaleY = 0.5) )
+obj_estaticos.append(Objeto(name = "house", posY = 0.3, posX = -5, scaleX = 3, scaleZ = 3, scaleY = 3, rotateY = math.pi/2))
+obj_estaticos.append(Objeto(name = "office", posY = 0.1, posX = 8, scaleX = 2, scaleZ = 2, scaleY = 2))
+obj_estaticos.append(Objeto(name = "mill", posY = -0.2, posX = 12, posZ = 6, scaleX = 0.5, scaleZ = 0.5, scaleY = 0.5) )
 
 # ambientes e objetos de fundo
-obj_estaticos.append(Objeto(objName = "street", posY = -0.89, posX = 0, posZ = 0, scaleX = 3/2, scaleZ = 18))
-obj_estaticos.append(Objeto(objName = "rainbow", posY = 0.4, posX = 8, scaleX = 10, scaleZ = 10, scaleY = 10))
-obj_estaticos.append(Objeto(objName = "fire", posY = 0.1, posX = 6.7, scaleX = 1, scaleZ = 1, scaleY = 1, rotateY = math.pi/2) )
-obj_estaticos.append(Objeto(objName = "barn", posY = 0.1, posX = 8, scaleX = 1, scaleZ = 1, scaleY = 1))
-obj_estaticos.append(Objeto(objName = "ground", posY = -0.9, scaleX = 20.0, scaleZ = 20.0))
-obj_estaticos.append(Objeto(objName = "mountains", posX = 18.0, rotateY = math.pi/2))
-obj_estaticos.append(Objeto(objName = "mountains", posX = -18.0, rotateY = math.pi/2))
-obj_estaticos.append(Objeto(objName = "mountains", posZ = 18.0))
-obj_estaticos.append(Objeto(objName = "mountains", posZ = -18.0))
+obj_estaticos.append(Objeto(name = "street", posY = -0.89, posX = 0, posZ = 0, scaleX = 3/2, scaleZ = 18))
+obj_estaticos.append(Objeto(name = "rainbow", posY = 0.4, posX = 8, scaleX = 10, scaleZ = 10, scaleY = 10))
+obj_estaticos.append(Objeto(name = "fire", posY = 0.1, posX = 6.7, scaleX = 1, scaleZ = 1, scaleY = 1, rotateY = math.pi/2) )
+obj_estaticos.append(Objeto(name = "barn", posY = 0.1, posX = 8, scaleX = 1, scaleZ = 1, scaleY = 1))
+obj_estaticos.append(Objeto(name = "ground", posY = -0.9, scaleX = 20.0, scaleZ = 20.0))
+obj_estaticos.append(Objeto(name = "mountains", posX = 18.0, rotateY = math.pi/2))
+obj_estaticos.append(Objeto(name = "mountains", posX = -18.0, rotateY = math.pi/2))
+obj_estaticos.append(Objeto(name = "mountains", posZ = 18.0))
+obj_estaticos.append(Objeto(name = "mountains", posZ = -18.0))
 
 
 obj_animados = []
-obj_animados.append(Car(objName = "car", posX = 0.5, posY = 0.35, posZ = 0, scaleX = 60, scaleZ = 60, scaleY = 60))
-obj_animados.append(nuvens(objName = "nuvens", scaleX = 100.0, scaleY = 100.0, scaleZ = 100.0))
-obj_animados.append(Marte(objName = "mars", posX = 45, posY = 50, posZ = 40, scaleX = 18.0, scaleY = 18.0, scaleZ = 18.0))
-obj_animados.append(Ufo(objName = "ufo", posX = 1.5, posY = 10, posZ = 10))
+obj_animados.append(Car(name = "car", posX = 0.5, posY = 0.35, posZ = 0, scaleX = 60, scaleZ = 60, scaleY = 60))
+obj_animados.append(nuvens(name = "nuvens", scaleX = 100.0, scaleY = 100.0, scaleZ = 100.0))
+obj_animados.append(Marte(name = "mars", posX = 45, posY = 50, posZ = 40, scaleX = 18.0, scaleY = 18.0, scaleZ = 18.0))
+obj_animados.append(Ufo(name = "ufo", posX = 1.5, posY = 10, posZ = 10))
 
 
 # Enviar dados para a GPU.
@@ -572,8 +560,8 @@ def key_event(window,key,scancode,action,mods):
         
 yaw = -90.0 
 pitch = 0.0
-lastX =  W/2
-lastY =  H/2
+lastX =  width/2
+lastY =  heigth/2
 
 def mouse_event(window, xpos, ypos):
     global paused, firstMouse, cameraFront, yaw, pitch, lastX, lastY
@@ -592,11 +580,7 @@ def mouse_event(window, xpos, ypos):
 
     yaw += xoffset
     pitch += yoffset
-
     
-    if pitch >= 80.0: pitch = 80.0
-    if pitch <= -80.0: pitch = -80.0
-
     front = glm.vec3()
     front.x = math.cos(glm.radians(yaw)) * math.cos(glm.radians(pitch))
     front.y = math.sin(glm.radians(pitch))
@@ -642,7 +626,7 @@ def view():
 
 def projection():
     global W, W
-    mat_projection = glm.perspective(glm.radians(90.0), W/W, 0.1, 1000.0)
+    mat_projection = glm.perspective(glm.radians(90.0), 1, 0.1, 1000.0)
     mat_projection = np.array(mat_projection)    
     return mat_projection
 
