@@ -1,15 +1,6 @@
-#""" To add a new cell, type ''
-# To add a new markdown cell, type ''
-
-"""
-Plano refatoração:
- - Alterar nome das variaveis
- - Refatorar Classe 'Objeto'
-"""
-
 # Computação Gráfica - Trabalho 2
 
-# Aluno:                          NUSP:
+# Grupo:                          NUSP:
 # Michelle Wingter da Silva       10783243
 # Juliano Fantozzi                9791218
 # Luís Filipe Vasconcelos Peres   10310641
@@ -272,10 +263,6 @@ class Objeto:
                 Objeto.textures.append(model['texture'][texture_id - 1])
             
         self._vertexLength = len(Objeto.p) - self._vertexIndex
-       
-        
-        
-        
 
     def load_texture_from_file(self, filePath):
         if self._textureIndex is None:
@@ -291,15 +278,9 @@ class Objeto:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data)
-        
-        
-
-        
     
     @staticmethod
     def syncGPU():
-        #  Essa função sincroniza os dados dos vértices e coordenadas de textura com a GPU. Basicamente, ela envia os dados pra GPU. 
-
         if Objeto.p is None or Objeto.textures is None:
             raise Exception("Objeto não foi definido")
 
@@ -571,8 +552,6 @@ def mouse_event(window, xpos, ypos):
 
     xoffset = xpos - lastX
     yoffset = lastY - ypos
-    # lastX = xpos
-    # lastY = ypos
 
     sensitivity = 0.3 
     xoffset *= sensitivity
@@ -630,10 +609,7 @@ def projection():
     mat_projection = np.array(mat_projection)    
     return mat_projection
 
-
 # Nesse momento, nós exibimos a janela!
-# 
-
 
 glfw.show_window(window)
 glfw.set_cursor_pos(window, lastX, lastY)
@@ -656,7 +632,6 @@ while not glfw.window_should_close(window):
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     
-    #glClearColor(1.0/4,1.0/4,1.0,1.0)
     glClearColor(255/255,230/255,204/255,1)
     
     if polygonal_mode==True:
@@ -680,7 +655,7 @@ while not glfw.window_should_close(window):
     
     glfw.swap_buffers(window)
 
-for obj in obj_animados: # Tirar vida dos objetos dinâmicos.
+for obj in obj_animados:
     obj.kill()
 camera.kill()
 
