@@ -2,4 +2,3 @@ objects/*
 Pipfile
 Pipfile.lock
 .zip
-T3-OLD/objects/*
