@@ -1,0 +1,4 @@
+objects/*
+Pipfile
+Pipfile.lock
+.zip
